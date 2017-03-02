@@ -223,18 +223,21 @@ CCSMATRIX* ConverterToCÑS(COOMATRIX &Matrix)
 	int i = 0, j = 0, k = 1, NNZ_per_row = 0, NNZ = 0, N = 0;
 	NNZ = Matrix.NNZ;
 	N = Matrix.N;
-	CCSMATRIX Mtx(NNZ, N);
+	CCSMATRIX * Mtx= new CCSMATRIX(NNZ, N);
 
 	for (i = 0; i < NNZ; i++)
 	{
-		Mtx.val[i] = Matrix.val[i];
-		printf("%lf , ", Mtx.val[i]);
-		Mtx.row_ind[i] = Matrix.row_ind[i];
-		printf("%d , ", Mtx.row_ind[i]);
+		Mtx->val[i] = Matrix.val[i];
+		printf("%lf , ", Mtx->val[i]);
+		Mtx->row_ind[i] = Matrix.row_ind[i];
+		printf("%d , ", Mtx->row_ind[i]);
 	}
 
-	Mtx.col_ptr[0] = 0;
-	Mtx.col_ptr[N + 1] = NNZ;
+	Mtx->col_ptr[0] = 0;
+	Mtx->col_ptr[N + 1] = NNZ;
+
+	return Mtx;
+
 
 }
 
