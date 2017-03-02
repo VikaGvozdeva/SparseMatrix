@@ -108,12 +108,20 @@ struct CCSMATRIX {
 
 	CCSMATRIX(int _NNZ, int _N)
 	{
-		int N = _N;
-		int NNZ = _NNZ;
+		int i, j;
+		N = _N;
+		NNZ = _NNZ;
 		val = (double*)malloc(NNZ * sizeof(double));
 		row_ind = (int*)malloc(NNZ * sizeof(int));
 		col_ptr = (int*)malloc((N + 1) * sizeof(int));
+		for (i = 0; i < N+1; i++)
+		{
+			col_ptr[i] = 0;
+		}
+		//col_ptr[N] = NNZ;
 	}
+
+
 	CCSMATRIX(const CCSMATRIX& Matrix)
 	{
 		N = Matrix.N;
@@ -220,35 +228,27 @@ int SearchMax(int *arr, int N)
 
 CCSMATRIX* ConverterToCÑS(COOMATRIX &Matrix)
 {
-	int i = 0, j = 0, k = 1, NNZ_per_row = 0, NNZ = 0, N = 0, numb = 0;
+	int i = 0, j = 0, k = 1, NNZ_per_row = 0, NNZ = 0, N = 0, tmp = 0;
 	NNZ = Matrix.NNZ;
 	N = Matrix.N;
-	CCSMATRIX * Mtx= new CCSMATRIX(NNZ, N);
+	CCSMATRIX* Mtx= new CCSMATRIX(NNZ,N);
 
 	for (i = 0; i < NNZ; i++)
 	{
 		Mtx->val[i] = Matrix.val[i];
-		printf("%lf , ", Mtx->val[i]);
 		Mtx->row_ind[i] = Matrix.row_ind[i];
-		printf("%d , ", Mtx->row_ind[i]);
 	}
 
-	Mtx->col_ptr[0] = 0;
-	Mtx->col_ptr[N + 1] = NNZ;
-
-	j = 0;
-	do
+	for (j = 0; j < NNZ; j++)
 	{
-		do
-		{
-			numb = Matrix.col_ind[j];
-			Mtx->col_ptr[++numb]++;
-		} while (Matrix.col_ind[j] == Matrix.col_ind[++j]);
-	} while (j < NNZ);
+		tmp = Matrix.col_ind[j];
+		Mtx->col_ptr[++tmp]++;
+	}
+	while (j < NNZ);
 
-	for (k = 2; k < N + 1; k++)
+	for (k = 2; k < (Matrix.N + 1 ); k++)
 	{
-		Mtx->col_ptr[j] += Mtx->col_ptr[j - 1];
+		Mtx->col_ptr[k] += Mtx->col_ptr[k - 1];
 	}
 
 	return Mtx;
