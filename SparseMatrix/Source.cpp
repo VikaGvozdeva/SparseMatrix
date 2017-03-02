@@ -242,7 +242,7 @@ CCSMATRIX* ConverterToCÑS(COOMATRIX &Matrix)
 		do
 		{
 			numb = Matrix.col_ind[j];
-			Mtx->col_ptr[numb]++;
+			Mtx->col_ptr[++numb]++;
 		} while (Matrix.col_ind[j] == Matrix.col_ind[++j]);
 	} while (j < NNZ);
 
@@ -262,7 +262,7 @@ int main()
 	COOMATRIX Matrix(NNZ, N);
 	ReadMatrixInfo(Matrix);
 	Matrix.PrintMatrix(Matrix.NNZ);
-	//MATRIX_ELLPACK* Matrix_E = ConverterInELLPACK(Matrix);
-	//Matrix_E->PrintMatrix(Matrix_E->NNZ_max);
+	CCSMATRIX* Test = ConverterToCÑS(Matrix);
+	Test->PrintCCSMatrix(Test->NNZ, Test->N);
 	system("pause");
 }
