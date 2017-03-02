@@ -220,7 +220,7 @@ int SearchMax(int *arr, int N)
 
 CCSMATRIX* ConverterToCÑS(COOMATRIX &Matrix)
 {
-	int i = 0, j = 0, k = 1, NNZ_per_row = 0, NNZ = 0, N = 0;
+	int i = 0, j = 0, k = 1, NNZ_per_row = 0, NNZ = 0, N = 0, numb = 0;
 	NNZ = Matrix.NNZ;
 	N = Matrix.N;
 	CCSMATRIX * Mtx= new CCSMATRIX(NNZ, N);
@@ -236,9 +236,22 @@ CCSMATRIX* ConverterToCÑS(COOMATRIX &Matrix)
 	Mtx->col_ptr[0] = 0;
 	Mtx->col_ptr[N + 1] = NNZ;
 
+	j = 0;
+	do
+	{
+		do
+		{
+			numb = Matrix.col_ind[j];
+			Mtx->col_ptr[numb]++;
+		} while (Matrix.col_ind[j] == Matrix.col_ind[++j]);
+	} while (j < NNZ);
+
+	for (k = 2; k < N + 1; k++)
+	{
+		Mtx->col_ptr[j] += Mtx->col_ptr[j - 1];
+	}
+
 	return Mtx;
-
-
 }
 
 int main()
