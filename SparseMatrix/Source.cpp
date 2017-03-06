@@ -42,7 +42,46 @@ struct COOMATRIX
 		}
 		printf("\n");
 	}
+
+	void COOMATRIX::Sort(int NNZ)
+	{
+		int i, j;
+		int tmp1, tmp2;
+		double tmp3;
+		for (i = 0; i < NNZ - 1; i++)
+			for (j = i + 1; j < NNZ; j++)
+			{
+				if (row_ind[i] > row_ind[j])
+				{
+					tmp1 = row_ind[i];
+					row_ind[i] = row_ind[j];
+					row_ind[j] = tmp1;
+					tmp2 = col_ind[i];
+					col_ind[i] = col_ind[j];
+					col_ind[j] = tmp2;
+					tmp3 = val[i];
+					val[i] = val[j];
+					val[j] = tmp3;
+				}
+				if (row_ind[i] == row_ind[j])
+				{
+					if (col_ind[i] > col_ind[j])
+					{
+						tmp1 = row_ind[i];
+						row_ind[i] = row_ind[j];
+						row_ind[j] = tmp1;
+						tmp2 = col_ind[i];
+						col_ind[i] = col_ind[j];
+						col_ind[j] = tmp2;
+						tmp3 = val[i];
+						val[i] = val[j];
+						val[j] = tmp3;
+					}
+				}
+			}
+	}
 };
+
 
 struct CRSMATRIX {
 
@@ -55,12 +94,18 @@ struct CRSMATRIX {
 
 	CRSMATRIX(int _NNZ, int _N)
 	{
+		int i;
 		N = _N;
 		NNZ = _NNZ;
 		val = (double*)malloc(NNZ * sizeof(double));
 		col_ind = (int*)malloc(NNZ * sizeof(int));
 		row_ptr = (int*)malloc((N + 1) * sizeof(int));
+		for (i = 0; i < N + 1; i++)
+		{
+			row_ptr[i] = 0;
+		}
 	}
+	
 	CRSMATRIX(const CRSMATRIX& Matrix)
 	{
 		int i;
@@ -69,6 +114,11 @@ struct CRSMATRIX {
 		val = (double*)malloc(NNZ * sizeof(double));
 		col_ind = (int*)malloc(NNZ * sizeof(int));
 		row_ptr = (int*)malloc((N + 1) * sizeof(int));
+		for (i = 0; i < N + 1; i++)
+		{
+			row_ptr[i] = 0;
+		}
+	
 	}
 
 	~CRSMATRIX()
@@ -155,6 +205,60 @@ struct CCSMATRIX {
 	}
 };
 
+//struct COMPR_DIAG_MATRIX {
+//
+//	int N;
+//	int NNZ;
+//	int B;
+//	int block_rows, block_cols; //number of rows or columns blocks
+//	int r, c; //rows and columns in each subblock
+//	double **val;
+//	double *val_c;
+//	int **col_ind;
+//	int *col_ind_c;
+//	int *row_ind_c;
+//
+//
+//	COMPR_DIAG_MATRIX(int NNZ, int N)
+//	{
+//		int i;
+//		val = (double**)malloc(N * sizeof(double*));
+//		for (i = 0; i<N; i++)
+//			val[i] = (double*)malloc(NNZ_max * sizeof(double));
+//	CRSMATRIX(const CRSMATRIX& Matrix)
+//	{
+//		int i;
+//		N = Matrix.N;
+//		NNZ = Matrix.NNZ;
+//		val = (double*)malloc(NNZ * sizeof(double));
+//		col_ind = (int*)malloc(NNZ * sizeof(int));
+//		row_ptr = (int*)malloc((N + 1) * sizeof(int));
+//	}
+//
+//	~CRSMATRIX()
+//	{
+//		free(val);
+//		free(col_ind);
+//		free(row_ptr);
+//	}
+//
+//	void CRSMATRIX::PrintCRSMatrix(int _NNZ, int _N)
+//	{
+//		int i;
+//		N = _N;
+//		NNZ = _NNZ;
+//		printf("val:");
+//		for (i = 0; i < NNZ; i++)
+//			printf("%lf , ", val[i]);
+//		printf(" \n col_ind:");
+//		for (i = 0; i < NNZ; i++)
+//			printf("%d , ", col_ind[i]);
+//		printf(" \n row_ptr:");
+//		for (i = 0; i < N + 1; i++)
+//			printf("%d , ", row_ptr[i]);
+//		printf("\n");
+//	}
+//};
 
 void ReadMatrixInfo(COOMATRIX &Matrix)
 {
@@ -223,7 +327,7 @@ int SearchMax(int *arr, int N)
 	return max_arr;
 }
 
-CCSMATRIX* ConverterToCÑS(COOMATRIX &Matrix)
+CCSMATRIX* ConverterToCCS(COOMATRIX &Matrix)
 {
 	int i = 0, j = 0, k = 0, NNZ = 0, N = 0, tmp_ind = 0;
 	NNZ = Matrix.NNZ;
@@ -251,7 +355,35 @@ CCSMATRIX* ConverterToCÑS(COOMATRIX &Matrix)
 	return Mtx;
 }
 
-int main()
+CRSMATRIX* ConverterToCRS(COOMATRIX &Matrix)
+{
+	int i = 0, j = 0, k = 0, NNZ = 0, N = 0, tmp_ind = 0;
+	NNZ = Matrix.NNZ;
+	N = Matrix.N;
+	CRSMATRIX* Mtx = new CRSMATRIX(NNZ, N);
+
+	for (i = 0; i < NNZ; i++)
+	{
+		Mtx->val[i] = Matrix.val[i];
+		Mtx->col_ind[i] = Matrix.col_ind[i];
+	}
+
+	for (j = 0; j < NNZ; j++)
+	{
+		tmp_ind = Matrix.row_ind[j];
+		Mtx->row_ptr[++tmp_ind]++;
+	}
+	while (j < NNZ);
+
+	for (k = 2; k < (Matrix.N + 1); k++)
+	{
+		Mtx->row_ptr[k] += Mtx->row_ptr[k - 1];
+	}
+
+	return Mtx;
+}
+
+	int main()
 {
 	int N = 0;
 	int NNZ = 0;
@@ -259,7 +391,10 @@ int main()
 	COOMATRIX Matrix(NNZ, N);
 	ReadMatrixInfo(Matrix);
 	Matrix.PrintMatrix(Matrix.NNZ);
-	CCSMATRIX* Test = ConverterToCÑS(Matrix);
-	Test->PrintCCSMatrix(Test->NNZ, Test->N);
+	Matrix.Sort(Matrix.NNZ);
+	Matrix.PrintMatrix(Matrix.NNZ);
+	//CCSMATRIX* Test = ConverterToCÑS(Matrix);
+	CRSMATRIX* Test = ConverterToCRS(Matrix);
+	Test->PrintCRSMatrix(Test->NNZ, Test->N);
 	system("pause");
 }
