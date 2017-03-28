@@ -267,7 +267,7 @@ struct COMPDIAGMATRIX{
 	int B;
 	double** value;
 
-	void GetB(COMPDIAGMATRIX* Matrix);
+	//void GetB(COMPDIAGMATRIX* Matrix);
 	
 
 };
@@ -345,6 +345,50 @@ struct SKYLINEMATRIX{
 		autr = (double*)malloc((NNZ - N) / 2 * sizeof(double));
 		jptr = (int*)malloc((NNZ - N) / 2 * sizeof(int));
 		iptr = (int*)malloc((N + 1) * sizeof(int));
+
+	}
+	bool IsSymmetric(COOMATRIX &M)
+	{
+		int N = M.N;
+		int NNZ = M.NNZ;
+		int i = 0, l = 0;
+		double* row = (double*)malloc((NNZ - N) / 2 * sizeof(double));
+		double* col = (double*)malloc((NNZ - N) / 2 * sizeof(double));
+		bool* check = (bool*)malloc((NNZ - N) / 2 * sizeof(bool));
+		for (i = 0; i < NNZ; i++)
+		{
+			if (M.row_ind[i] > M.col_ind[i])
+			{
+				row[l] = M.row_ind[i];
+				col[l] = M.col_ind[i];
+				l++;
+			}
+
+		}
+		l = 0;
+		for (i = 0; i < NNZ; i++)
+		{
+			if (M.row_ind[i] < M.col_ind[i])
+			{
+				if ((M.col_ind[i] == col[l]) && (M.row_ind[i] == row[l]))
+				{
+					check[l] = true;
+					l++;
+				}
+				else
+				{
+					check[l] = false;
+					l++;
+				}
+			}
+	
+		}
+		for (i = 0; i < (NNZ - N) / 2; i++)
+		{
+			if (check[i] == false)
+				return false;
+		}
+		return true;
 
 	}
 	~SKYLINEMATRIX()
@@ -528,7 +572,7 @@ CRSMATRIX* ConverterToCRS(COOMATRIX &Matrix)
 }
 
 
-void qs(int* arr, int* _arr, int first, int last)
+void Sort(int* arr, int* _arr, int first, int last)
 {
 	int i = first, j = last, x = arr[(first + last) / 2];
 	int temp;
@@ -555,9 +599,9 @@ void qs(int* arr, int* _arr, int first, int last)
 	} while (i <= j);
 
 	if (i < last)
-		qs(arr, _arr, i, last);
+		Sort(arr, _arr, i, last);
 	if (first < j)
-		qs(arr, _arr, first, j);
+		Sort(arr, _arr, first, j);
 }
 
 
@@ -570,7 +614,6 @@ JDIAGMATRIX* ConverterToJDIAG(COOMATRIX &Matrix)
 
 	JDIAGMATRIX* Mtx = new JDIAGMATRIX(NNZ, N);
 
-	//??
 	///Mtx->numbdiag = Matrix.NNZ_row[0];
 	for (i = 0; i < N; i++)
 	{
@@ -579,7 +622,7 @@ JDIAGMATRIX* ConverterToJDIAG(COOMATRIX &Matrix)
 		Mtx->perm[i] = i;
 	}
 
-	qs(row_len, Mtx->perm, 0, N - 1);
+	Sort(row_len, Mtx->perm, 0, N - 1);
 	maxval = row_len[0];
 	Mtx->numbdiag = maxval;
 	CRSMATRIX* Test = ConverterToCRS(Matrix);
@@ -602,39 +645,38 @@ JDIAGMATRIX* ConverterToJDIAG(COOMATRIX &Matrix)
 
 SKYLINEMATRIX* ConverterToSL(COOMATRIX &Matrix)
 {
-	int i = 0, j = 0, k = 0, NNZ = 0, N = 0, tmp_ind = 0;
+	int i = 0, j = 0, k = 0, l = 0, NNZ = 0, N = 0, tmp_ind = 0;
 	NNZ = Matrix.NNZ;
 	N = Matrix.N;
 	SKYLINEMATRIX* Mtx = new SKYLINEMATRIX(NNZ, N);
-	//sort coo(rows)
-	//autr
+
 	for (i = 0; i < NNZ; i++)
 	{
-		//altr
 		if (Matrix.col_ind[i] < Matrix.row_ind[i])
 		{
 			Mtx->altr[j++] = Matrix.val[i];
-			//Mtx->altr[j++] = Matrix.val[Matrix.col_ind[i]];
-			Mtx->jptr[j++] = Matrix.col_ind[i];
+			Mtx->jptr[l++] = Matrix.col_ind[i];
+			Mtx->iptr[Matrix.row_ind[i+1]]++;
 		}
 		else if (Matrix.col_ind[i] = Matrix.row_ind[i])
 		{
 			Mtx->adiag[Matrix.col_ind[i]] = Matrix.val[i];
-			//Mtx->adiag[Matrix.col_ind[i]] = Matrix.val[Matrix.col_ind[i]];
 		}
 
 	}
 	Matrix.Sort(Matrix.NNZ);
-	//делаем сорт
 	for (i = 0; i < NNZ; i++)
-	{//autr
-		if (Matrix.col_ind[i] > Matrix.row_ind[i])
-		{
-			Mtx->autr[j++] = Matrix.val[Matrix.col_ind[i]];
-		}
+	{
+			if (Matrix.col_ind[i] > Matrix.row_ind[i])
+			{
+				Mtx->autr[k++] = Matrix.val[i];
+			}
 	}
-		//sort
-		//altr
+	for (k = 2; k < (Matrix.N + 1); k++)
+	{
+		Mtx->iptr[k] += Mtx->iptr[k - 1];
+	}
+
 	return Mtx;
 }
 	int main()
