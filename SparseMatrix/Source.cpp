@@ -679,6 +679,31 @@ SKYLINEMATRIX* ConverterToSL(COOMATRIX &Matrix)
 
 	return Mtx;
 }
+
+double * Matrix_VectorMultiplicationInSL(SKYLINEMATRIX* Matrix, double *Vector, int N)
+{
+	int i, j;
+	double tmp;
+	double * result = (double*)malloc(N * sizeof(double));
+	for (i = 0; i < N; i++)
+	{
+		result[i] = 0;
+	}
+	for (i = 0; i < N; i++)
+	{
+		result[i] = Vector[i] * Matrix->adiag[i];
+	}
+	for (i = 0; i < N; i++)
+		for (j = Matrix->iptr[i]; j < Matrix->iptr[i + 1] - 1; j++)
+		{
+			result[i] += Vector[Matrix->jptr[j]] * Matrix->altr[j];
+			result[Matrix->jptr[j]] += Vector[i] * Matrix->autr[j];
+		}
+
+	return result;
+}
+	
+
 	int main()
 {
 	int N = 0;
