@@ -311,6 +311,7 @@ struct JDIAGMATRIX {
 	double *jdiag;
 	int *col_ind;
 	int *jd_ptr;
+	//int *val;
 
 	JDIAGMATRIX(int _NNZ, int _N)// int _numbdiag)
 	{
@@ -320,6 +321,7 @@ struct JDIAGMATRIX {
 		int i;
 		jdiag = (double*)malloc(NNZ * sizeof(double));
 		col_ind = (int*)malloc(NNZ * sizeof(int));
+		//val = 
 		jd_ptr = (int*)malloc((N ) * sizeof(int));
 		for (i = 0; i < N + 1; i++)
 		{
@@ -652,7 +654,28 @@ JDIAGMATRIX* ConverterToJDIAG(COOMATRIX &Matrix)
 
 	return Mtx;
 }
+double*  Matrix_VectorMultiplicationInJDIAG(JDIAGMATRIX* Matrix, double *Vector, int N)
+{
+	int i = 0, j = 0, k = 0, NNZ = 0, tmp_ind = 0, maxval = 0, upper = 0;
+	NNZ = Matrix->NNZ;
 
+	double * result = (double*)malloc(N * sizeof(double));
+	for (i = 0; i < N; i++)
+	{
+		result[i] = 0;
+	}
+
+
+	for (int j = 0; j < Matrix->numbdiag; j++) 
+	{
+		for (int i = Matrix->jd_ptr[j]; i < Matrix->jd_ptr[j + 1]; i++)
+		{
+			tmp_ind = Matrix->col_ind[i];
+			result[i]+=Matrix->jdiag[i] * Vector[tmp_ind];
+		}
+}
+	return result;
+}
 COMPDIAGMATRIX* ConverterToCompDiag(COOMATRIX &Matrix)
 {
 	int i = 0, j = 0, k = 0, l = 0, NNZ = 0, N = 0, diag_ind = 0, B = 0, tmp_ind = 0;
@@ -702,6 +725,10 @@ double * Matrix_VectorMultiplicationInCompDiag(COMPDIAGMATRIX* Matrix, double *V
 	int max;
 	int B = Matrix->B;
 	double * result = (double*)malloc(N * sizeof(double));
+	for (i = 0; i < N; i++)
+	{
+		result[i] = 0;
+	}
 
 	for (j = 0; j < B; j++) {
 		tmp = Matrix->diag[j];
