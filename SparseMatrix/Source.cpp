@@ -18,8 +18,6 @@ struct COOMATRIX
 	int *col_ind;
 	int *row_ind;
 	int *NNZ_row;
-	//change
-	//int diag_numb;
 	COOMATRIX(int _NNZ, int _N)
 	{
 		int i;
@@ -265,7 +263,7 @@ double * Matrix_VectorMultiplicationInCCS(CCSMATRIX* Matrix, double *Vector, int
 
 
 struct COMPDIAGMATRIX {
-//sort matrix before
+
 	int N;
 	int NNZ;
 
@@ -460,40 +458,6 @@ struct SKYLINEMATRIX{
 };
 
 
-//struct COMPR_DIAG_MATRIX {
-//
-//	int N;
-//	int NNZ;
-//	int B;
-//	int block_rows, block_cols; //number of rows or columns blocks
-//	int r, c; //rows and columns in each subblock
-//	double **val;
-//	double *val_c;
-//	int **col_ind;
-//	int *col_ind_c;
-//	int *row_ind_c;
-//
-//
-//	COMPR_DIAG_MATRIX(int NNZ, int N)
-//	{
-//		int i;
-//		val = (double**)malloc(N * sizeof(double*));
-//		for (i = 0; i<N; i++)
-//			val[i] = (double*)malloc(NNZ_max * sizeof(double));
-//int GetNumbDiag(COOMATRIX &Matrix)
-//{
-//	int N = Matrix.N;
-//	int diag_numb = 0;
-//	int NNZ = Matrix.NNZ;
-//	int i;
-//	diag_numb = Matrix.NNZ_row[0];
-//	for (i = 1; i < N; i++)
-//	{
-//		if (Matrix.NNZ_row[i] > diag_numb)
-//			diag_numb = Matrix.NNZ_row[i];
-//	}
-//	return diag_numb;
-//}
 void ReadMatrixInfo(COOMATRIX &Matrix)
 {
 	FILE *f;
@@ -694,7 +658,6 @@ COMPDIAGMATRIX* ConverterToCompDiag(COOMATRIX &Matrix)
 	int i = 0, j = 0, k = 0, l = 0, NNZ = 0, N = 0, diag_ind = 0, B = 0, tmp_ind = 0;
 	NNZ = Matrix.NNZ;
 	N = Matrix.N;
-	//B = GetNumbDiag(Matrix);
 	int diag_numb = 0;
 	diag_numb = Matrix.NNZ_row[0];
 	for (i = 1; i < N; i++)
