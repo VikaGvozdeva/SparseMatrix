@@ -18,6 +18,8 @@ struct COOMATRIX
 	int *col_ind;
 	int *row_ind;
 	int *NNZ_row;
+	//change
+	//int diag_numb;
 	COOMATRIX(int _NNZ, int _N)
 	{
 		int i;
@@ -262,13 +264,44 @@ double * Matrix_VectorMultiplicationInCCS(CCSMATRIX* Matrix, double *Vector, int
 
 
 
-struct COMPDIAGMATRIX{
+struct COMPDIAGMATRIX {
+//sort matrix before
+	int N;
+	int NNZ;
 
 	int B;
-	double** value;
+	double* diag;
+	double** val;
 
-	//void GetB(COMPDIAGMATRIX* Matrix);
+	COMPDIAGMATRIX(int _N, int _NNZ, int _B)
+	{
+		int i;
+		int j;
+		N = _N;
+		NNZ = _NNZ;
+		B = _B;
+
+		diag = (double*)malloc(B * sizeof(double*));
+		val = (double**)malloc(B * sizeof(double*));
+		for (i = 0; i < N; i++)
+			val[i] = (double*)malloc(N * sizeof(double*));
+		for (i = 0; i < B; i++)
+			for (j = 0; j < N; j++)
+				val[i][j] = 0;
+	}
 	
+	~COMPDIAGMATRIX()
+	{
+		int i;
+		for (int i = 0; i < N; i++)
+			free(val[i]);
+		free(val);
+		free(diag);
+	}
+
+	void COMPDIAGMATRIX::PrintMatrix(int NNZ)
+	{
+	}
 
 };
 struct JDIAGMATRIX {
@@ -447,7 +480,20 @@ struct SKYLINEMATRIX{
 //		val = (double**)malloc(N * sizeof(double*));
 //		for (i = 0; i<N; i++)
 //			val[i] = (double*)malloc(NNZ_max * sizeof(double));
-
+//int GetNumbDiag(COOMATRIX &Matrix)
+//{
+//	int N = Matrix.N;
+//	int diag_numb = 0;
+//	int NNZ = Matrix.NNZ;
+//	int i;
+//	diag_numb = Matrix.NNZ_row[0];
+//	for (i = 1; i < N; i++)
+//	{
+//		if (Matrix.NNZ_row[i] > diag_numb)
+//			diag_numb = Matrix.NNZ_row[i];
+//	}
+//	return diag_numb;
+//}
 void ReadMatrixInfo(COOMATRIX &Matrix)
 {
 	FILE *f;
@@ -640,6 +686,49 @@ JDIAGMATRIX* ConverterToJDIAG(COOMATRIX &Matrix)
 		}
 	}
 
+	return Mtx;
+}
+
+COMPDIAGMATRIX* ConverterToCompDiag(COOMATRIX &Matrix)
+{
+	int i = 0, j = 0, k = 0, l = 0, NNZ = 0, N = 0, diag_ind = 0, B = 0, tmp_ind = 0;
+	NNZ = Matrix.NNZ;
+	N = Matrix.N;
+	//B = GetNumbDiag(Matrix);
+	int diag_numb = 0;
+	diag_numb = Matrix.NNZ_row[0];
+	for (i = 1; i < N; i++)
+	{
+		if (Matrix.NNZ_row[i] > diag_numb)
+		{
+			diag_numb = Matrix.NNZ_row[i];
+			//where is the max of nnz (row)
+			diag_ind = i;
+		}		
+	}
+	B = diag_numb;
+	COMPDIAGMATRIX* Mtx = new COMPDIAGMATRIX(NNZ, N, B);
+	Matrix.Sort(Matrix.NNZ);
+	//fill diag 0,diag_ind
+	for (i = 0; i < Matrix.NNZ; i++)
+	{
+		if (Matrix.row_ind[i] == diag_ind)
+		{
+			Mtx->val[diag_ind][j] = Matrix.val[i];
+			Mtx->diag[j] = Matrix.col_ind[i] - Matrix.row_ind[i];
+		    j++;
+		}
+		for (i = 0; i < NNZ; i++)
+		{
+			tmp_ind= Matrix.col_ind[i] - Matrix.row_ind[i];
+			for (j = 0; j < diag_numb; j++)
+			{
+				if (tmp_ind == Mtx->diag[j])
+					Mtx->val[Matrix.row_ind[i]][j] = Matrix.val[i];
+
+			}
+		}
+	}
 	return Mtx;
 }
 
