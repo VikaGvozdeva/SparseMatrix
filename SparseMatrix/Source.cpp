@@ -732,6 +732,30 @@ COMPDIAGMATRIX* ConverterToCompDiag(COOMATRIX &Matrix)
 	return Mtx;
 }
 
+double * Matrix_VectorMultiplicationInCompDiag(COMPDIAGMATRIX* Matrix, double *Vector, int N)
+{
+	int i, j;
+	int tmp;
+	int max;
+	int B = Matrix->B;
+	double * result = (double*)malloc(N * sizeof(double));
+
+	for (j = 0; j < B; j++) {
+		tmp = Matrix->diag[j];
+		if (0 > (0 - tmp))
+			i = 0;
+		else i = 0 - tmp;
+
+		if (0 > tmp)
+			max = Matrix->N - 0;
+		else max = Matrix->N - tmp;
+	
+		for (i; i < max; i++)
+			result[i] += Matrix->val[i][j] * Vector[tmp + i];
+	}
+	return result;
+}
+
 SKYLINEMATRIX* ConverterToSL(COOMATRIX &Matrix)
 {
 	int i = 0, j = 0, k = 0, l = 0, NNZ = 0, N = 0, tmp_ind = 0;
