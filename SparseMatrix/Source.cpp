@@ -6,6 +6,7 @@
 #include <iostream>
 #include <algorithm>
 
+
 using namespace std;
 
 #define MAX_LINE_LEN 1000
@@ -110,7 +111,7 @@ struct CRSMATRIX {
 		}
 	}
 	
-	CRSMATRIX(const CRSMATRIX& Matrix)
+	/*CRSMATRIX(const CRSMATRIX& Matrix)
 	{
 		int i;
 		N = Matrix.N;
@@ -123,7 +124,7 @@ struct CRSMATRIX {
 			row_ptr[i] = 0;
 		}
 	
-	}
+	}*/
 
 	~CRSMATRIX()
 	{
@@ -371,13 +372,22 @@ struct SKYLINEMATRIX{
 
 	SKYLINEMATRIX(int _N, int _NNZ)
 	{
+		int i;
 		N = _N;
 		NNZ = _NNZ;
 		adiag = (double*)malloc(N * sizeof(double));
-		altr = (double*)malloc((NNZ-N)/2 * sizeof(double));
+		altr = (double*)malloc((NNZ - N)/2 * sizeof(double));
 		autr = (double*)malloc((NNZ - N) / 2 * sizeof(double));
 		jptr = (int*)malloc((NNZ - N) / 2 * sizeof(int));
 		iptr = (int*)malloc((N + 1) * sizeof(int));
+		for (i = 0; i < (NNZ - N) / 2; i++)
+		{
+			altr[i] = 0;
+			autr[i] = 0;
+			jptr[i] = 0;
+		}
+		for (i = 0; i < N + 1; i++)
+			iptr[i] = 0;
 
 	}
 	bool IsSymmetric(COOMATRIX &M)
@@ -466,7 +476,7 @@ void ReadMatrixInfo(COOMATRIX &Matrix)
 	int  i;
 	char *line;
 	char *p = NULL;
-	char name[256] = "b1_ss.mtx";
+	char name[256] = "cage4.mtx";
 
 	f = fopen(name, "r");
 	if (f == NULL)
@@ -499,7 +509,7 @@ void ReadNumberForMatrix(int &N, int &NNZ)
 	FILE *f;
 	char *line;
 	char *p = NULL;
-	char name[256] = "b1_ss.mtx";
+	char name[256] = "cage4.mtx";
 
 	f = fopen(name, "r");
 	if (f == NULL)
@@ -741,7 +751,8 @@ double * Matrix_VectorMultiplicationInCompDiag(COMPDIAGMATRIX* Matrix, double *V
 		else max = Matrix->N - tmp;
 	
 		for (i; i < max; i++)
-			result[i] += Matrix->val[i][j] * Vector[tmp + i];
+			result[i] += Matrix->val[i][j] * Vector[tmp + i];
+
 	}
 	return result;
 }
@@ -757,9 +768,11 @@ SKYLINEMATRIX* ConverterToSL(COOMATRIX &Matrix)
 	{
 		if (Matrix.col_ind[i] < Matrix.row_ind[i])
 		{
-			Mtx->altr[j++] = Matrix.val[i];
-			Mtx->jptr[l++] = Matrix.col_ind[i];
+			Mtx->altr[j] = Matrix.val[i];
+			Mtx->jptr[l] = Matrix.col_ind[i];
 			Mtx->iptr[Matrix.row_ind[i+1]]++;
+			j++;
+			l++;
 		}
 		else if (Matrix.col_ind[i] = Matrix.row_ind[i])
 		{
@@ -818,30 +831,28 @@ double * Matrix_VectorMultiplicationInSL(SKYLINEMATRIX* Matrix, double *Vector, 
 	ReadMatrixInfo(Matrix);
 	Matrix.PrintMatrix(Matrix.NNZ);
 	//for CRS
-	//Matrix.Sort(Matrix.NNZ);
+	Matrix.Sort(Matrix.NNZ);
 	//Matrix.PrintMatrix(Matrix.NNZ);
 	//CCSMATRIX* Test = ConverterToCÑS(Matrix);
-	//CRSMATRIX* Test = ConverterToCRS(Matrix);
+	CRSMATRIX* Test = ConverterToCRS(Matrix);
 	/*CCSMATRIX* test = ConverterToCCS(Matrix);*/
-	//test->PrintCCSMatrix(test->NNZ, test->N);
+	Test->PrintCRSMatrix(Test->NNZ, Test->N);
 	//JDIAGMATRIX* test = ConverterToJDIAG(Matrix);
 	//test->PrintJDIAGMatrix(test->NNZ, test->N);
-	SKYLINEMATRIX* test = ConverterToSL(Matrix);
-	test->PrintSLMatrix(test->NNZ, test->N);
-//	v = (double*)malloc(Matrix.N * sizeof(double));
-	//for (int i = 0; i < Matrix.N; i++)
-		/*v[0] = 2;
-		v[1] = 0;
-		v[2] = 3;
-		v[3] = 10;
-		v[4] = 0;
-		v[5] = 1;
-		v[6] = 3;*/
-	//res=Matrix_VectorMultiplicationInCRS(test, v, N);
+	//SKYLINEMATRIX* test = ConverterToSL(Matrix);
+	//test->PrintSLMatrix(test->NNZ, test->N);
+	v = (double*)malloc(Matrix.N * sizeof(double));
+	res = (double*)malloc(Matrix.N * sizeof(double));
+	for (int i = 0; i < Matrix.N; i++)
+	{
+		v[i] = 1;
+	}
+
+	res=Matrix_VectorMultiplicationInCRS(Test, v, N);
 //	res = Matrix_VectorMultiplicationInCCS(test, v, N);
 
-	//printf("Result: \n");
-	//for (int i = 0; i < Matrix.N; i++)
-	//	printf("%lf  ", res[i]);
+	printf("Result: \n");
+	for (int i = 0; i < Matrix.N; i++)
+		printf("%lf  ", res[i]);
 	system("pause");
 }
