@@ -370,7 +370,7 @@ struct SKYLINEMATRIX{
 	int* jptr;
 	int *iptr;
 
-	SKYLINEMATRIX(int _N, int _NNZ)
+	SKYLINEMATRIX(int _NNZ, int _N)
 	{
 		int i;
 		N = _N;
@@ -454,16 +454,16 @@ struct SKYLINEMATRIX{
 			printf("%lf , ", adiag[i]);
 		printf(" \n autr:");
 		for (i = 0; i < (NNZ-N)/2; i++)
-			printf("%d , ", autr[i]);
+			printf("%lf , ", autr[i]);
 		printf(" \n altr:");
 		for (i = 0; i < (NNZ - N) / 2; i++)
-			printf("%d , ", altr[i]);
+			printf("%lf , ", altr[i]);
+		printf(" \n iptr:");
 		for (i = 0; i < (N + 1); i++)
 			printf("%d , ", iptr[i]);
 		printf(" \n jptr:");
 		for (i = 0; i < (NNZ - N) / 2; i++)
 			printf("%d , ", jptr[i]);
-		
 		printf("\n");
 	}
 
@@ -759,33 +759,35 @@ double * Matrix_VectorMultiplicationInCompDiag(COMPDIAGMATRIX* Matrix, double *V
 
 SKYLINEMATRIX* ConverterToSL(COOMATRIX &Matrix)
 {
-	int i = 0, j = 0, k = 0, l = 0, NNZ = 0, N = 0, tmp_ind = 0;
+	int i = 0, j = 0, k = 0, l = 0, NNZ = 0, N = 0, tmp_ind = 0, ad = 0;
 	NNZ = Matrix.NNZ;
 	N = Matrix.N;
 	SKYLINEMATRIX* Mtx = new SKYLINEMATRIX(NNZ, N);
 
 	for (i = 0; i < NNZ; i++)
 	{
-		if (Matrix.col_ind[i] < Matrix.row_ind[i])
-		{
-			Mtx->altr[j] = Matrix.val[i];
-			Mtx->jptr[l] = Matrix.col_ind[i];
-			Mtx->iptr[Matrix.row_ind[i+1]]++;
-			j++;
-			l++;
-		}
-		else if (Matrix.col_ind[i] = Matrix.row_ind[i])
+		if (Matrix.col_ind[i] == Matrix.row_ind[i])
 		{
 			Mtx->adiag[Matrix.col_ind[i]] = Matrix.val[i];
 		}
-
+		else if (Matrix.col_ind[i] > Matrix.row_ind[i])
+		{
+			Mtx->autr[j] = Matrix.val[i];
+			Mtx->jptr[l] = Matrix.col_ind[i];
+			//Mtx->iptr[Matrix.row_ind[i+1]]++;
+			Mtx->iptr[Matrix.row_ind[i]]++;
+			j++;
+			l++;
+		}
+		
 	}
 	Matrix.Sort(Matrix.NNZ);
 	for (i = 0; i < NNZ; i++)
 	{
-			if (Matrix.col_ind[i] > Matrix.row_ind[i])
+			if (Matrix.col_ind[i] < Matrix.row_ind[i])
 			{
-				Mtx->autr[k++] = Matrix.val[i];
+				Mtx->altr[k] = Matrix.val[i];
+				k++;
 			}
 	}
 	for (k = 2; k < (Matrix.N + 1); k++)
@@ -809,12 +811,12 @@ double * Matrix_VectorMultiplicationInSL(SKYLINEMATRIX* Matrix, double *Vector, 
 	{
 		result[i] = Vector[i] * Matrix->adiag[i];
 	}
-	for (i = 0; i < N; i++)
+	/*for (i = 0; i < N; i++)
 		for (j = Matrix->iptr[i]; j < Matrix->iptr[i + 1] - 1; j++)
 		{
 			result[i] += Vector[Matrix->jptr[j]] * Matrix->altr[j];
 			result[Matrix->jptr[j]] += Vector[i] * Matrix->autr[j];
-		}
+		}*/
 
 	return result;
 }
@@ -831,16 +833,16 @@ double * Matrix_VectorMultiplicationInSL(SKYLINEMATRIX* Matrix, double *Vector, 
 	ReadMatrixInfo(Matrix);
 	Matrix.PrintMatrix(Matrix.NNZ);
 	//for CRS
-	Matrix.Sort(Matrix.NNZ);
+	//Matrix.Sort(Matrix.NNZ);
 	//Matrix.PrintMatrix(Matrix.NNZ);
 	//CCSMATRIX* Test = ConverterToCÑS(Matrix);
-	CRSMATRIX* Test = ConverterToCRS(Matrix);
+	//CRSMATRIX* Test = ConverterToCRS(Matrix);
 	/*CCSMATRIX* test = ConverterToCCS(Matrix);*/
-	Test->PrintCRSMatrix(Test->NNZ, Test->N);
+	//Test->PrintCRSMatrix(Test->NNZ, Test->N);
 	//JDIAGMATRIX* test = ConverterToJDIAG(Matrix);
 	//test->PrintJDIAGMatrix(test->NNZ, test->N);
-	//SKYLINEMATRIX* test = ConverterToSL(Matrix);
-	//test->PrintSLMatrix(test->NNZ, test->N);
+	SKYLINEMATRIX* test = ConverterToSL(Matrix);
+	test->PrintSLMatrix(test->NNZ, test->N);
 	v = (double*)malloc(Matrix.N * sizeof(double));
 	res = (double*)malloc(Matrix.N * sizeof(double));
 	for (int i = 0; i < Matrix.N; i++)
@@ -848,7 +850,7 @@ double * Matrix_VectorMultiplicationInSL(SKYLINEMATRIX* Matrix, double *Vector, 
 		v[i] = 1;
 	}
 
-	res=Matrix_VectorMultiplicationInCRS(Test, v, N);
+	res=Matrix_VectorMultiplicationInSL(test, v, N);
 //	res = Matrix_VectorMultiplicationInCCS(test, v, N);
 
 	printf("Result: \n");
