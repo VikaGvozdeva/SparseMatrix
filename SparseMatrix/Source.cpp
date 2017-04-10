@@ -38,7 +38,7 @@ struct COOMATRIX
 		free(row_ind);
 		free(NNZ_row);
 	}
-	void COOMATRIX::PrintMatrix(int NNZ)
+	void PrintMatrix(int NNZ)
 	{
 		int i;
 		for (i = 0; i < NNZ; i++)
@@ -48,7 +48,7 @@ struct COOMATRIX
 		printf("\n");
 	}
 
-	void COOMATRIX::Sort(int NNZ)
+	void Sort(int NNZ)
 	{
 		int i, j;
 		int tmp1, tmp2;
@@ -133,7 +133,7 @@ struct CRSMATRIX {
 		free(row_ptr);
 	}
 
-	void CRSMATRIX::PrintCRSMatrix(int _NNZ, int _N)
+	void PrintCRSMatrix(int _NNZ, int _N)
 	{
 		int i;
 		N = _N;
@@ -150,6 +150,58 @@ struct CRSMATRIX {
 		printf("\n");
 	}
 };
+
+CRSMATRIX* ConverterToCRS(COOMATRIX &Matrix)
+{
+	int i = 0, j = 0, k = 0, NNZ = 0, N = 0, tmp_ind = 0;
+	NNZ = Matrix.NNZ;
+	N = Matrix.N;
+	CRSMATRIX* Mtx = new CRSMATRIX(NNZ, N);
+
+	for (i = 0; i < NNZ; i++)
+	{
+		Mtx->val[i] = Matrix.val[i];
+		Mtx->col_ind[i] = Matrix.col_ind[i];
+	}
+
+	for (j = 0; j < NNZ; j++)
+	{
+		tmp_ind = Matrix.row_ind[j];
+		Mtx->row_ptr[++tmp_ind]++;
+	}
+	while (j < NNZ);
+
+	for (k = 2; k < (Matrix.N + 1); k++)
+	{
+		Mtx->row_ptr[k] += Mtx->row_ptr[k - 1];
+	}
+
+	return Mtx;
+}
+
+double * Matrix_VectorMultiplicationInCRS(CRSMATRIX* Matrix, double *Vector, int N)
+{
+	int i, j;
+	double tmp;
+	double * result = (double*)malloc(N * sizeof(double));
+	for (i = 0; i < N; i++)
+	{
+		result[i] = 0;
+	}
+	if (N == Matrix->N)
+	{
+		for (i = 0; i < N; i++)
+		{
+			tmp = 0;
+			for (j = Matrix->row_ptr[i]; j < Matrix->row_ptr[i + 1]; j++)
+			{
+				tmp += Matrix->val[j] * Vector[Matrix->col_ind[j]];
+			}
+			result[i] = tmp;
+		}
+	}
+	return result;
+}
 
 struct CCSMATRIX {
 
@@ -192,7 +244,7 @@ struct CCSMATRIX {
 		free(col_ptr);
 	}
 
-	void CCSMATRIX::PrintCCSMatrix(int _NNZ, int _N)
+	void PrintCCSMatrix(int _NNZ, int _N)
 	{
 		int i;
 		int N = _N;
@@ -210,29 +262,32 @@ struct CCSMATRIX {
 	}
 };
 
-
-double * Matrix_VectorMultiplicationInCRS(CRSMATRIX* Matrix, double *Vector, int N)
+CCSMATRIX* ConverterToCCS(COOMATRIX &Matrix)
 {
-	int i, j;
-	double tmp;
-	double * result = (double*)malloc(N * sizeof(double));
-	for (i = 0; i < N; i++)
+	int i = 0, j = 0, k = 0, NNZ = 0, N = 0, tmp_ind = 0;
+	NNZ = Matrix.NNZ;
+	N = Matrix.N;
+	CCSMATRIX* Mtx = new CCSMATRIX(NNZ, N);
+
+	for (i = 0; i < NNZ; i++)
 	{
-		result[i] = 0;
+		Mtx->val[i] = Matrix.val[i];
+		Mtx->row_ind[i] = Matrix.row_ind[i];
 	}
-	if (N == Matrix->N)
+
+	for (j = 0; j < NNZ; j++)
 	{
-		for (i = 0; i < N; i++)
-		{
-			tmp = 0;
-			for (j = Matrix->row_ptr[i]; j < Matrix->row_ptr[i + 1]; j++)
-			{
-				tmp += Matrix->val[j] * Vector[Matrix->col_ind[j]];
-			}
-			result[i] = tmp;
-		}
+		tmp_ind = Matrix.col_ind[j];
+		Mtx->col_ptr[++tmp_ind]++;
 	}
-	return result;
+	while (j < NNZ);
+
+	for (k = 2; k < (Matrix.N + 1); k++)
+	{
+		Mtx->col_ptr[k] += Mtx->col_ptr[k - 1];
+	}
+
+	return Mtx;
 }
 
 double * Matrix_VectorMultiplicationInCCS(CCSMATRIX* Matrix, double *Vector, int N)
@@ -261,8 +316,6 @@ double * Matrix_VectorMultiplicationInCCS(CCSMATRIX* Matrix, double *Vector, int
 	return result;
 }
 
-
-
 struct COMPDIAGMATRIX {
 
 	int N;
@@ -281,9 +334,12 @@ struct COMPDIAGMATRIX {
 		B = _B;
 
 		diag = (double*)malloc(B * sizeof(double*));
-		val = (double**)malloc(B * sizeof(double*));
-		for (i = 0; i < N; i++)
+		val = (double**)malloc(N * sizeof(double*));
+		for (i = 0; i < B; i++)
 			val[i] = (double*)malloc(N * sizeof(double*));
+		/*val = (double**)malloc(B * sizeof(double*));
+		for (i = 0; i < N; i++)
+			val[i] = (double*)malloc(N * sizeof(double*));*/
 		for (i = 0; i < B; i++)
 			for (j = 0; j < N; j++)
 				val[i][j] = 0;
@@ -298,11 +354,133 @@ struct COMPDIAGMATRIX {
 		free(diag);
 	}
 
-	void COMPDIAGMATRIX::PrintMatrix(int NNZ)
+	void PrintMatrix(int _N, int _NNZ, int _B)
 	{
+		int i, j;
+		int N = _N;
+		int B = _B;
+		int NNZ = _NNZ;
+		printf("val:");
+		for (i = 0; i < B; i++)
+		{
+			printf("diag %d \n", i);
+			for (j = 0; j < N; j++)
+				printf("%lf , ", val[i][j]);
+		}
+		printf(" \n diag:");
+		for (i = 0; i < B; i++)
+			printf("%d , ", diag[i]);
+	
+		printf("\n");
+	}
+};
+void Sort(int* arr, int* _arr, int first, int last)
+{
+	int i = first, j = last, x = arr[(first + last) / 2];
+	int temp;
+
+	do {
+		while (arr[i] < x) i++;
+		while (arr[j] > x) j--;
+
+		if (i <= j) {
+			if (arr[i] > arr[j])
+			{
+				temp = arr[i];
+				arr[i] = arr[j];
+				arr[j] = arr[i];
+
+				temp = _arr[i];
+				arr[i] = _arr[j];
+				arr[j] = _arr[i];
+
+			}
+			i++;
+			j--;
+		}
+	} while (i <= j);
+
+	if (i < last)
+		Sort(arr, _arr, i, last);
+	if (first < j)
+		Sort(arr, _arr, first, j);
+}
+
+COMPDIAGMATRIX* ConverterToCompDiag(COOMATRIX &Matrix)
+{
+	int i = 0, j = 0, k = 0, l = 0, NNZ = 0, N = 0, diag_ind = 0, B = 0, tmp_ind = 0;
+	NNZ = Matrix.NNZ;
+	N = Matrix.N;
+
+	int diag_numb = 0;
+	diag_numb = Matrix.NNZ_row[0];
+	printf("%d , ", diag_numb);
+	for (i = 1; i < N; i++)
+	{
+		if (Matrix.NNZ_row[i] > diag_numb)
+		{
+			diag_numb = Matrix.NNZ_row[i];
+			//where is the max of nnz (row)
+			diag_ind = i;
+		}
+	}
+	B = diag_numb;
+	//printf("%d , ", diag_ind);
+	COMPDIAGMATRIX* Mtx = new COMPDIAGMATRIX(N, NNZ, B);
+	Matrix.Sort(Matrix.NNZ);
+	//fill diag 0,diag_ind
+	for (i = 0; i < NNZ; i++)
+	{
+		if (Matrix.row_ind[i] == diag_ind)
+		{
+			Mtx->val[diag_ind][j] = Matrix.val[i];
+			Mtx->diag[j] = Matrix.col_ind[i] - Matrix.row_ind[i];
+			j++;
+		}
+	}
+	for (i = 0; i < NNZ; i++)
+	{
+		tmp_ind = Matrix.col_ind[i] - Matrix.row_ind[i];
+		for (j = 0; j < diag_numb; j++)
+		{
+			if (tmp_ind == Mtx->diag[j])
+				Mtx->val[Matrix.row_ind[i]][j] = Matrix.val[i];
+
+		}
 	}
 
-};
+	return Mtx;
+}
+
+double * Matrix_VectorMultiplicationInCompDiag(COMPDIAGMATRIX* Matrix, double *Vector, int N)
+{
+	int i, j;
+	int tmp;
+	int max;
+	int B = Matrix->B;
+	double * result = (double*)malloc(N * sizeof(double));
+	for (i = 0; i < N; i++)
+	{
+		result[i] = 0;
+	}
+
+	for (j = 0; j < B; j++) {
+		tmp = Matrix->diag[j];
+		if (0 >(0 - tmp))
+			i = 0;
+		else i = 0 - tmp;
+
+		if (0 > tmp)
+			max = Matrix->N - 0;
+		else max = Matrix->N - tmp;
+
+		for (i; i < max; i++)
+			result[i] += Matrix->val[i][j] * Vector[tmp + i];
+
+	}
+	return result;
+}
+
 struct JDIAGMATRIX {
 
 	int NNZ;
@@ -314,7 +492,7 @@ struct JDIAGMATRIX {
 	int *jd_ptr;
 	//int *val;
 
-	JDIAGMATRIX(int _NNZ, int _N)// int _numbdiag)
+	JDIAGMATRIX(int _N, int _NNZ)// int _numbdiag)
 	{
 		//numbdiag = _numbdiag;
 		N = _N;
@@ -329,7 +507,7 @@ struct JDIAGMATRIX {
 			jd_ptr[i] = 0;
 		}
 	}
-	void JDIAGMATRIX::PrintJDIAGMatrix(int _NNZ, int _N)
+	void PrintMatrix(int _NNZ, int _N)
 	{
 		int i;
 		N = _N;
@@ -355,9 +533,68 @@ struct JDIAGMATRIX {
 		free(jdiag);
 		free(perm);
 	}
-
-
 };
+
+JDIAGMATRIX* ConverterToJDIAG(COOMATRIX &Matrix)
+{
+	int i = 0, j = 0, k = 0, NNZ = 0, N = 0, tmp_ind = 0, maxval = 0;
+	NNZ = Matrix.NNZ;
+	N = Matrix.N;
+	int *row_len = new int[N];
+
+	JDIAGMATRIX* Mtx = new JDIAGMATRIX(N, NNZ);
+
+	///Mtx->numbdiag = Matrix.NNZ_row[0];
+	for (i = 0; i < N; i++)
+	{
+		//row_len[i] = Matrix.row_ptr[i + 1] - Matrix.row_ptr[i];
+		row_len[i] = Matrix.NNZ_row[i];
+		Mtx->perm[i] = i;
+	}
+
+	Sort(row_len, Mtx->perm, 0, N - 1);
+	maxval = row_len[0];
+	Mtx->numbdiag = maxval;
+	CRSMATRIX* Test = ConverterToCRS(Matrix);
+	for (i = 0; i < maxval; i++)
+	{
+		Mtx->jd_ptr[i] = k;
+		for (j = 0; j < N; j++)
+		{
+			if (i < Mtx->perm[j])
+			{
+				Mtx->jdiag[k] = Matrix.val[Test->row_ptr[Mtx->perm[j]] + i];
+				Mtx->col_ind[k] = Matrix.col_ind[Test->row_ptr[Mtx->perm[j]] + i];
+				k++;
+			}
+		}
+	}
+
+	return Mtx;
+}
+double*  Matrix_VectorMultiplicationInJDIAG(JDIAGMATRIX* Matrix, double *Vector, int N)
+{
+	int i = 0, j = 0, k = 0, NNZ = 0, tmp_ind = 0, maxval = 0, upper = 0;
+	NNZ = Matrix->NNZ;
+
+	double * result = (double*)malloc(N * sizeof(double));
+	for (i = 0; i < N; i++)
+	{
+		result[i] = 0;
+	}
+
+
+	for (int j = 0; j < Matrix->numbdiag; j++)
+	{
+		for (int i = Matrix->jd_ptr[j]; i < Matrix->jd_ptr[j + 1]; i++)
+		{
+			tmp_ind = Matrix->col_ind[i];
+			result[i] += Matrix->jdiag[i] * Vector[tmp_ind];
+		}
+	}
+	return result;
+}
+
 struct BCRSMATRIX{
 };
 struct SKYLINEMATRIX{
@@ -444,7 +681,7 @@ struct SKYLINEMATRIX{
 		free(jptr);
 	}
 
-	void SKYLINEMATRIX::PrintSLMatrix(int _NNZ, int _N)
+	void PrintMatrix(int _NNZ, int _N)
 	{
 		int i;
 		N = _N;
@@ -469,6 +706,80 @@ struct SKYLINEMATRIX{
 
 };
 
+
+
+SKYLINEMATRIX* ConverterToSL(COOMATRIX &Matrix)
+{
+	int i = 0, j = 0, k = 0, l = 0, NNZ = 0, N = 0, tmp_ind = 0, ad = 0;
+	NNZ = Matrix.NNZ;
+	N = Matrix.N;
+	SKYLINEMATRIX* Mtx = new SKYLINEMATRIX(NNZ, N);
+
+	for (i = 0; i < NNZ; i++)
+	{
+		if (Matrix.col_ind[i] == Matrix.row_ind[i])
+		{
+			Mtx->adiag[Matrix.col_ind[i]] = Matrix.val[i];
+		}
+		else if (Matrix.col_ind[i] > Matrix.row_ind[i])
+		{
+			Mtx->autr[j] = Matrix.val[i];
+			Mtx->jptr[l] = Matrix.row_ind[i];
+			//Mtx->iptr[Matrix.row_ind[i+1]]++;
+			//Mtx->iptr[Matrix.row_ind[i]]++;
+			j++;
+			l++;
+		}
+
+	}
+	Matrix.Sort(Matrix.NNZ);
+	for (i = 0; i < NNZ; i++)
+	{
+		if (Matrix.col_ind[i] < Matrix.row_ind[i])
+		{
+			Mtx->altr[k] = Matrix.val[i];
+			k++;
+			Mtx->iptr[Matrix.row_ind[i]+1]++;
+		}
+	}
+
+	for (k = 2; k < (Matrix.N + 1); k++)
+	{
+		Mtx->iptr[k] += Mtx->iptr[k - 1];
+	}
+
+	/*Mtx->iptr[0] = Mtx->iptr[1];
+	for (k = 2; k < (Matrix.N+1); k++)
+	{
+	Mtx->iptr[k] += Mtx->iptr[k - 1];
+	}
+	Mtx->iptr[N + 1]++;*/
+
+	return Mtx;
+}
+
+double * Matrix_VectorMultiplicationInSL(SKYLINEMATRIX* Matrix, double *Vector, int N)
+{
+	int i, j;
+	double tmp;
+	double * result = (double*)malloc(N * sizeof(double));
+	for (i = 0; i < N; i++)
+	{
+		result[i] = 0;
+	}
+	for (i = 0; i < N; i++)
+	{
+		result[i] = Vector[i] * Matrix->adiag[i];
+	}
+	for (i = 0; i < N; i++)
+		for (j = Matrix->iptr[i]; j < Matrix->iptr[i + 1]; j++)
+		{
+			result[i] += Vector[Matrix->jptr[j]] * Matrix->altr[j];
+			result[Matrix->jptr[j]] += Vector[i] * Matrix->autr[j];
+		}
+
+	return result;
+}
 
 void ReadMatrixInfo(COOMATRIX &Matrix)
 {
@@ -537,291 +848,6 @@ int SearchMax(int *arr, int N)
 	return max_arr;
 }
 
-CCSMATRIX* ConverterToCCS(COOMATRIX &Matrix)
-{
-	int i = 0, j = 0, k = 0, NNZ = 0, N = 0, tmp_ind = 0;
-	NNZ = Matrix.NNZ;
-	N = Matrix.N;
-	CCSMATRIX* Mtx= new CCSMATRIX(NNZ,N);
-
-	for (i = 0; i < NNZ; i++)
-	{
-		Mtx->val[i] = Matrix.val[i];
-		Mtx->row_ind[i] = Matrix.row_ind[i];
-	}
-
-	for (j = 0; j < NNZ; j++)
-	{
-		tmp_ind = Matrix.col_ind[j];
-		Mtx->col_ptr[++tmp_ind]++;
-	}
-	while (j < NNZ);
-
-	for (k = 2; k < (Matrix.N + 1 ); k++)
-	{
-		Mtx->col_ptr[k] += Mtx->col_ptr[k - 1];
-	}
-
-	return Mtx;
-}
-
-CRSMATRIX* ConverterToCRS(COOMATRIX &Matrix)
-{
-	int i = 0, j = 0, k = 0, NNZ = 0, N = 0, tmp_ind = 0;
-	NNZ = Matrix.NNZ;
-	N = Matrix.N;
-	CRSMATRIX* Mtx = new CRSMATRIX(NNZ, N);
-
-	for (i = 0; i < NNZ; i++)
-	{
-		Mtx->val[i] = Matrix.val[i];
-		Mtx->col_ind[i] = Matrix.col_ind[i];
-	}
-
-	for (j = 0; j < NNZ; j++)
-	{
-		tmp_ind = Matrix.row_ind[j];
-		Mtx->row_ptr[++tmp_ind]++;
-	}
-	while (j < NNZ);
-
-	for (k = 2; k < (Matrix.N + 1); k++)
-	{
-		Mtx->row_ptr[k] += Mtx->row_ptr[k - 1];
-	}
-
-	return Mtx;
-}
-
-
-void Sort(int* arr, int* _arr, int first, int last)
-{
-	int i = first, j = last, x = arr[(first + last) / 2];
-	int temp;
-
-	do {
-		while (arr[i] < x) i++;
-		while (arr[j] > x) j--;
-
-		if (i <= j) {
-			if (arr[i] > arr[j])
-			{
-				temp = arr[i];
-				arr[i] = arr[j];
-				arr[j] = arr[i];
-
-				temp = _arr[i];
-				arr[i] = _arr[j];
-				arr[j] = _arr[i];
-
-			}
-			i++;
-			j--;
-		}
-	} while (i <= j);
-
-	if (i < last)
-		Sort(arr, _arr, i, last);
-	if (first < j)
-		Sort(arr, _arr, first, j);
-}
-
-
-JDIAGMATRIX* ConverterToJDIAG(COOMATRIX &Matrix)
-{
-	int i = 0, j = 0, k = 0, NNZ = 0, N = 0, tmp_ind = 0, maxval = 0;
-	NNZ = Matrix.NNZ;
-	N = Matrix.N;
-	int *row_len = new int[N];
-
-	JDIAGMATRIX* Mtx = new JDIAGMATRIX(NNZ, N);
-
-	///Mtx->numbdiag = Matrix.NNZ_row[0];
-	for (i = 0; i < N; i++)
-	{
-		//row_len[i] = Matrix.row_ptr[i + 1] - Matrix.row_ptr[i];
-		row_len[i] = Matrix.NNZ_row[i];
-		Mtx->perm[i] = i;
-	}
-
-	Sort(row_len, Mtx->perm, 0, N - 1);
-	maxval = row_len[0];
-	Mtx->numbdiag = maxval;
-	CRSMATRIX* Test = ConverterToCRS(Matrix);
-	for (i = 0; i < maxval; i++)
-	{
-		Mtx->jd_ptr[i] = k;
-		for (j = 0; j < N; j++)
-		{
-			if (i < Mtx->perm[j])
-			{
-				Mtx->jdiag[k] = Matrix.val[Test->row_ptr[Mtx->perm[j]] + i];
-				Mtx->col_ind[k] = Matrix.col_ind[Test->row_ptr[Mtx->perm[j]] + i];
-				k++;
-			}
-		}
-	}
-
-	return Mtx;
-}
-double*  Matrix_VectorMultiplicationInJDIAG(JDIAGMATRIX* Matrix, double *Vector, int N)
-{
-	int i = 0, j = 0, k = 0, NNZ = 0, tmp_ind = 0, maxval = 0, upper = 0;
-	NNZ = Matrix->NNZ;
-
-	double * result = (double*)malloc(N * sizeof(double));
-	for (i = 0; i < N; i++)
-	{
-		result[i] = 0;
-	}
-
-
-	for (int j = 0; j < Matrix->numbdiag; j++) 
-	{
-		for (int i = Matrix->jd_ptr[j]; i < Matrix->jd_ptr[j + 1]; i++)
-		{
-			tmp_ind = Matrix->col_ind[i];
-			result[i]+=Matrix->jdiag[i] * Vector[tmp_ind];
-		}
-}
-	return result;
-}
-COMPDIAGMATRIX* ConverterToCompDiag(COOMATRIX &Matrix)
-{
-	int i = 0, j = 0, k = 0, l = 0, NNZ = 0, N = 0, diag_ind = 0, B = 0, tmp_ind = 0;
-	NNZ = Matrix.NNZ;
-	N = Matrix.N;
-	int diag_numb = 0;
-	diag_numb = Matrix.NNZ_row[0];
-	for (i = 1; i < N; i++)
-	{
-		if (Matrix.NNZ_row[i] > diag_numb)
-		{
-			diag_numb = Matrix.NNZ_row[i];
-			//where is the max of nnz (row)
-			diag_ind = i;
-		}		
-	}
-	B = diag_numb;
-	COMPDIAGMATRIX* Mtx = new COMPDIAGMATRIX(NNZ, N, B);
-	Matrix.Sort(Matrix.NNZ);
-	//fill diag 0,diag_ind
-	for (i = 0; i < Matrix.NNZ; i++)
-	{
-		if (Matrix.row_ind[i] == diag_ind)
-		{
-			Mtx->val[diag_ind][j] = Matrix.val[i];
-			Mtx->diag[j] = Matrix.col_ind[i] - Matrix.row_ind[i];
-		    j++;
-		}
-		for (i = 0; i < NNZ; i++)
-		{
-			tmp_ind= Matrix.col_ind[i] - Matrix.row_ind[i];
-			for (j = 0; j < diag_numb; j++)
-			{
-				if (tmp_ind == Mtx->diag[j])
-					Mtx->val[Matrix.row_ind[i]][j] = Matrix.val[i];
-
-			}
-		}
-	}
-	return Mtx;
-}
-
-double * Matrix_VectorMultiplicationInCompDiag(COMPDIAGMATRIX* Matrix, double *Vector, int N)
-{
-	int i, j;
-	int tmp;
-	int max;
-	int B = Matrix->B;
-	double * result = (double*)malloc(N * sizeof(double));
-	for (i = 0; i < N; i++)
-	{
-		result[i] = 0;
-	}
-
-	for (j = 0; j < B; j++) {
-		tmp = Matrix->diag[j];
-		if (0 > (0 - tmp))
-			i = 0;
-		else i = 0 - tmp;
-
-		if (0 > tmp)
-			max = Matrix->N - 0;
-		else max = Matrix->N - tmp;
-	
-		for (i; i < max; i++)
-			result[i] += Matrix->val[i][j] * Vector[tmp + i];
-
-	}
-	return result;
-}
-
-SKYLINEMATRIX* ConverterToSL(COOMATRIX &Matrix)
-{
-	int i = 0, j = 0, k = 0, l = 0, NNZ = 0, N = 0, tmp_ind = 0, ad = 0;
-	NNZ = Matrix.NNZ;
-	N = Matrix.N;
-	SKYLINEMATRIX* Mtx = new SKYLINEMATRIX(NNZ, N);
-
-	for (i = 0; i < NNZ; i++)
-	{
-		if (Matrix.col_ind[i] == Matrix.row_ind[i])
-		{
-			Mtx->adiag[Matrix.col_ind[i]] = Matrix.val[i];
-		}
-		else if (Matrix.col_ind[i] > Matrix.row_ind[i])
-		{
-			Mtx->autr[j] = Matrix.val[i];
-			Mtx->jptr[l] = Matrix.col_ind[i];
-			//Mtx->iptr[Matrix.row_ind[i+1]]++;
-			Mtx->iptr[Matrix.row_ind[i]]++;
-			j++;
-			l++;
-		}
-		
-	}
-	Matrix.Sort(Matrix.NNZ);
-	for (i = 0; i < NNZ; i++)
-	{
-			if (Matrix.col_ind[i] < Matrix.row_ind[i])
-			{
-				Mtx->altr[k] = Matrix.val[i];
-				k++;
-			}
-	}
-	for (k = 2; k < (Matrix.N + 1); k++)
-	{
-		Mtx->iptr[k] += Mtx->iptr[k - 1];
-	}
-
-	return Mtx;
-}
-
-double * Matrix_VectorMultiplicationInSL(SKYLINEMATRIX* Matrix, double *Vector, int N)
-{
-	int i, j;
-	double tmp;
-	double * result = (double*)malloc(N * sizeof(double));
-	for (i = 0; i < N; i++)
-	{
-		result[i] = 0;
-	}
-	for (i = 0; i < N; i++)
-	{
-		result[i] = Vector[i] * Matrix->adiag[i];
-	}
-	/*for (i = 0; i < N; i++)
-		for (j = Matrix->iptr[i]; j < Matrix->iptr[i + 1] - 1; j++)
-		{
-			result[i] += Vector[Matrix->jptr[j]] * Matrix->altr[j];
-			result[Matrix->jptr[j]] += Vector[i] * Matrix->autr[j];
-		}*/
-
-	return result;
-}
-	
-
 	int main()
 {
 	int N = 0;
@@ -839,10 +865,10 @@ double * Matrix_VectorMultiplicationInSL(SKYLINEMATRIX* Matrix, double *Vector, 
 	//CRSMATRIX* Test = ConverterToCRS(Matrix);
 	/*CCSMATRIX* test = ConverterToCCS(Matrix);*/
 	//Test->PrintCRSMatrix(Test->NNZ, Test->N);
-	//JDIAGMATRIX* test = ConverterToJDIAG(Matrix);
+	//COMPDIAGMATRIX* test = ConverterToCompDiag(Matrix);
 	//test->PrintJDIAGMatrix(test->NNZ, test->N);
 	SKYLINEMATRIX* test = ConverterToSL(Matrix);
-	test->PrintSLMatrix(test->NNZ, test->N);
+	test->PrintMatrix(test->NNZ, test->N);
 	v = (double*)malloc(Matrix.N * sizeof(double));
 	res = (double*)malloc(Matrix.N * sizeof(double));
 	for (int i = 0; i < Matrix.N; i++)
