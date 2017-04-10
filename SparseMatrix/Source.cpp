@@ -1,15 +1,17 @@
-#define _CRT_SECURE_NO_WARNINGS
+﻿#define _CRT_SECURE_NO_WARNINGS
+
+#include <Windows.h>
 #include <stdlib.h> 
 #include <stdio.h> 
 #include <cmath>
 #include <string.h>
 #include <iostream>
 #include <algorithm>
-
+#include <time.h>
 
 using namespace std;
 
-#define MAX_LINE_LEN 1000
+#define MAX_LINE_LEN 1000000
 
 struct COOMATRIX
 {
@@ -31,13 +33,7 @@ struct COOMATRIX
 		for (i = 0; i < N; i++)
 			NNZ_row[i] = 0;
 	}
-	~COOMATRIX()
-	{
-		free(val);
-		free(col_ind);
-		free(row_ind);
-		free(NNZ_row);
-	}
+
 	void PrintMatrix(int NNZ)
 	{
 		int i;
@@ -86,7 +82,13 @@ struct COOMATRIX
 			}
 	}
 };
-
+void DeleteCOOMATRIX(COOMATRIX &Matrix)
+{
+	free(Matrix.val);
+	free(Matrix.col_ind);
+	free(Matrix.row_ind);
+	free(Matrix.NNZ_row);
+}
 
 struct CRSMATRIX {
 
@@ -126,13 +128,6 @@ struct CRSMATRIX {
 	
 	}*/
 
-	~CRSMATRIX()
-	{
-		free(val);
-		free(col_ind);
-		free(row_ptr);
-	}
-
 	void PrintCRSMatrix(int _NNZ, int _N)
 	{
 		int i;
@@ -150,8 +145,14 @@ struct CRSMATRIX {
 		printf("\n");
 	}
 };
+void DeleteCRSMATRIX(CRSMATRIX *Matrix)
+{
+	free(Matrix->val);
+	free(Matrix->col_ind);
+	free(Matrix->row_ptr);
+}
 
-CRSMATRIX* ConverterToCRS(COOMATRIX &Matrix)
+CRSMATRIX* ConvertToCRS(COOMATRIX &Matrix)
 {
 	int i = 0, j = 0, k = 0, NNZ = 0, N = 0, tmp_ind = 0;
 	NNZ = Matrix.NNZ;
@@ -237,13 +238,6 @@ struct CCSMATRIX {
 		col_ptr = (int*)malloc((N + 1) * sizeof(int));
 	}
 
-	~CCSMATRIX()
-	{
-		free(val);
-		free(row_ind);
-		free(col_ptr);
-	}
-
 	void PrintCCSMatrix(int _NNZ, int _N)
 	{
 		int i;
@@ -262,7 +256,15 @@ struct CCSMATRIX {
 	}
 };
 
-CCSMATRIX* ConverterToCCS(COOMATRIX &Matrix)
+void DeleteCCSMATRIX(CCSMATRIX *Matrix)
+{
+	free(Matrix->val);
+	free(Matrix->row_ind);
+	free(Matrix->col_ptr);
+}
+
+
+CCSMATRIX* ConvertToCCS(COOMATRIX &Matrix)
 {
 	int i = 0, j = 0, k = 0, NNZ = 0, N = 0, tmp_ind = 0;
 	NNZ = Matrix.NNZ;
@@ -374,25 +376,26 @@ struct COMPDIAGMATRIX {
 		printf("\n");
 	}
 };
-void Sort(int* arr, int* _arr, int first, int last)
+void qs(int* s_arr,int* _s_arr, int first, int last)
 {
-	int i = first, j = last, x = arr[(first + last) / 2];
-	int temp;
+	int i = first, j = last, x = s_arr[(first + last) / 2], tmp = 0;
 
 	do {
-		while (arr[i] < x) i++;
-		while (arr[j] > x) j--;
+		/*while (s_arr[i] < x) i++;
+		while (s_arr[j] > x) j--;*/
+		while (s_arr[i] > x) i++;
+		while (s_arr[j] < x) j--;
 
 		if (i <= j) {
-			if (arr[i] > arr[j])
+			if (s_arr[i] < s_arr[j])
 			{
-				temp = arr[i];
-				arr[i] = arr[j];
-				arr[j] = arr[i];
+				tmp = s_arr[i];
+				s_arr[i] = s_arr[j];
+				s_arr[j] = tmp;
 
-				temp = _arr[i];
-				arr[i] = _arr[j];
-				arr[j] = _arr[i];
+				tmp = _s_arr[i];
+				_s_arr[i] = _s_arr[j];
+				_s_arr[j] = tmp;
 
 			}
 			i++;
@@ -401,12 +404,14 @@ void Sort(int* arr, int* _arr, int first, int last)
 	} while (i <= j);
 
 	if (i < last)
-		Sort(arr, _arr, i, last);
+		qs(s_arr, _s_arr, i, last);
 	if (first < j)
-		Sort(arr, _arr, first, j);
+		qs(s_arr, _s_arr, first, j);
 }
 
-COMPDIAGMATRIX* ConverterToCompDiag(COOMATRIX &Matrix)
+
+
+COMPDIAGMATRIX* ConvertToCompDiag(COOMATRIX &Matrix)
 {
 	int i = 0, j = 0, k = 0, l = 0, NNZ = 0, N = 0, diag_ind = 0, B = 0, tmp_ind = 0;
 	NNZ = Matrix.NNZ;
@@ -490,17 +495,16 @@ struct JDIAGMATRIX {
 	double *jdiag;
 	int *col_ind;
 	int *jd_ptr;
-	//int *val;
 
 	JDIAGMATRIX(int _N, int _NNZ)// int _numbdiag)
 	{
 		//numbdiag = _numbdiag;
+		int i;
 		N = _N;
 		NNZ = _NNZ;
-		int i;
 		jdiag = (double*)malloc(NNZ * sizeof(double));
-		col_ind = (int*)malloc(NNZ * sizeof(int));
-		//val = 
+		perm = (int*)malloc(N * sizeof(int));
+		col_ind = (int*)malloc(NNZ * sizeof(int)); 
 		jd_ptr = (int*)malloc((N ) * sizeof(int));
 		for (i = 0; i < N + 1; i++)
 		{
@@ -512,15 +516,16 @@ struct JDIAGMATRIX {
 		int i;
 		N = _N;
 		NNZ = _NNZ;
-		printf("val:");
+		printf(" \n jdiag:");
 		for (i = 0; i < NNZ; i++)
-			printf("%lf , ", jdiag[i]);
+			printf("%d , ", jdiag[i]);
 		printf(" \n col_ind:");
 		for (i = 0; i < NNZ; i++)
 			printf("%d , ", col_ind[i]);
 		printf(" \n diag_ptr:");
 		for (i = 0; i < N + 1; i++)
 			printf("%d , ", jd_ptr[i]);
+		printf(" \n perm:");
 		for (i = 0; i < N + 1; i++)
 			printf("%d , ", perm[i]);
 		printf("\n");
@@ -535,8 +540,8 @@ struct JDIAGMATRIX {
 	}
 };
 
-JDIAGMATRIX* ConverterToJDIAG(COOMATRIX &Matrix)
-{
+JDIAGMATRIX* ConvertToJDIAG(COOMATRIX &Matrix)
+{//dosort
 	int i = 0, j = 0, k = 0, NNZ = 0, N = 0, tmp_ind = 0, maxval = 0;
 	NNZ = Matrix.NNZ;
 	N = Matrix.N;
@@ -551,11 +556,34 @@ JDIAGMATRIX* ConverterToJDIAG(COOMATRIX &Matrix)
 		row_len[i] = Matrix.NNZ_row[i];
 		Mtx->perm[i] = i;
 	}
+	/*printf(" \n perm----------");
+	for (i = 0; i < N; i++)
+		printf("%d , ", Mtx->perm[i]);
 
-	Sort(row_len, Mtx->perm, 0, N - 1);
+	printf(" \n row_len----------");
+	for (i = 0; i < N; i++)
+		printf("%d , ", row_len[i]);
+	qs(row_len, Mtx->perm, 0, N-1);
+	printf(" \n perm----------");
+	for (i = 0; i < N; i++)
+		printf("%d , ", Mtx->perm[i]);
+
+	printf(" \n row_len----------");
+	for (i = 0; i < N; i++)
+		printf("%d , ", row_len[i]);*/
 	maxval = row_len[0];
 	Mtx->numbdiag = maxval;
-	CRSMATRIX* Test = ConverterToCRS(Matrix);
+	double** val = (double**)malloc(N * sizeof(double*));
+	for (i = 0; i < N; i++)
+		val[i] = (double*)malloc(maxval * sizeof(double*));
+	//for (i = 0; i < N; i++)
+	//	for (j = 0; j < Matrix.NNZ_row[i]; j++)
+	//	{
+	//		val[i][j]=
+	//	}
+	/*for (i=0; i<N; i++)
+		Mtx->perm[i]=*/
+	/*CRSMATRIX* Test = ConverterToCRS(Matrix);
 	for (i = 0; i < maxval; i++)
 	{
 		Mtx->jd_ptr[i] = k;
@@ -569,7 +597,7 @@ JDIAGMATRIX* ConverterToJDIAG(COOMATRIX &Matrix)
 			}
 		}
 	}
-
+*/
 	return Mtx;
 }
 double*  Matrix_VectorMultiplicationInJDIAG(JDIAGMATRIX* Matrix, double *Vector, int N)
@@ -671,15 +699,6 @@ struct SKYLINEMATRIX{
 		return true;
 
 	}
-	~SKYLINEMATRIX()
-	{
-		
-		free(adiag);
-		free(autr);
-		free(altr);
-		free(iptr);
-		free(jptr);
-	}
 
 	void PrintMatrix(int _NNZ, int _N)
 	{
@@ -706,9 +725,17 @@ struct SKYLINEMATRIX{
 
 };
 
+void DeleteSKYLINEMATRIX(SKYLINEMATRIX *Matrix)
+{
 
+	free(Matrix->adiag);
+	free(Matrix->autr);
+	free(Matrix->altr);
+	free(Matrix->iptr);
+	free(Matrix->jptr);
+}
 
-SKYLINEMATRIX* ConverterToSL(COOMATRIX &Matrix)
+SKYLINEMATRIX* ConvertToSL(COOMATRIX &Matrix)
 {
 	int i = 0, j = 0, k = 0, l = 0, NNZ = 0, N = 0, tmp_ind = 0, ad = 0;
 	NNZ = Matrix.NNZ;
@@ -747,14 +774,6 @@ SKYLINEMATRIX* ConverterToSL(COOMATRIX &Matrix)
 	{
 		Mtx->iptr[k] += Mtx->iptr[k - 1];
 	}
-
-	/*Mtx->iptr[0] = Mtx->iptr[1];
-	for (k = 2; k < (Matrix.N+1); k++)
-	{
-	Mtx->iptr[k] += Mtx->iptr[k - 1];
-	}
-	Mtx->iptr[N + 1]++;*/
-
 	return Mtx;
 }
 
@@ -780,14 +799,13 @@ double * Matrix_VectorMultiplicationInSL(SKYLINEMATRIX* Matrix, double *Vector, 
 
 	return result;
 }
-
-void ReadMatrixInfo(COOMATRIX &Matrix)
+void ReadMatrixInfo(COOMATRIX& Matrix, char *name)//������ ������� �� �����
 {
-	FILE *f;
-	int  i;
-	char *line;
-	char *p = NULL;
-	char name[256] = "cage4.mtx";
+	FILE* f;
+	int i;
+	char* line;
+	char* p = NULL;
+	//char name[256] = "ck656.mtx";
 
 	f = fopen(name, "r");
 	if (f == NULL)
@@ -815,12 +833,13 @@ void ReadMatrixInfo(COOMATRIX &Matrix)
 	free(line);
 	fclose(f);
 }
-void ReadNumberForMatrix(int &N, int &NNZ)
+
+void ReadNumberForMatrix(int& N, int& NNZ, char *name) //������ ������� � ���-�� ��������� ���������
 {
-	FILE *f;
-	char *line;
-	char *p = NULL;
-	char name[256] = "cage4.mtx";
+	FILE* f;
+	char* line;
+	char* p = NULL;
+	//char name[256] = "ck656.mtx";
 
 	f = fopen(name, "r");
 	if (f == NULL)
@@ -847,40 +866,224 @@ int SearchMax(int *arr, int N)
 	}
 	return max_arr;
 }
-
-	int main()
+double SearchMax_double(double *arr, int N) // ïîèñê ìàêñèìóìà äëÿ double
 {
+	int i;
+	double max_arr = arr[0];
+	for (i = 1; i < N; i++)
+	{
+		if (max_arr < arr[i])
+			max_arr = arr[i];
+	}
+	return max_arr;
+}
+double CheckCorrectness(double * my_mult, double * mkl_mult, int N)  //ïðîâåðêà êîððåêòíîñòè óìíîæåíèÿ,íóæíî åùå ïîëó÷èòü ðåçóëüòàò â MKL
+{
+	int i;
+	double res;
+	double * arr_abs;
+	arr_abs = (double*)malloc(N * sizeof(double));
+	for (i = 0; i < N; i++)
+		arr_abs[i] = abs(my_mult[i] - mkl_mult[i]);
+	res = SearchMax_double(arr_abs, N);
+	free(arr_abs);
+	return res;
+}
+
+int main(int argc, char** argv)
+{
+
+
+
+
+
+	char *fileName;
+	double timer;
+	int i;
+	double* v;
 	int N = 0;
 	int NNZ = 0;
-	double *v, *res;
-	ReadNumberForMatrix(N, NNZ);
+	FILE *fp = fopen("data.dt", "w");
+	LARGE_INTEGER frequency, start, finish;
+
+	fileName = (char*)malloc(256 * sizeof(char));
+	strcpy(fileName, argv[1]);
+
+	fprintf(fp, "Matrix file name: %s\n\n", fileName);
+
+	QueryPerformanceFrequency(&frequency);
+	QueryPerformanceCounter(&start);
+	ReadNumberForMatrix(N, NNZ, fileName);
 	COOMATRIX Matrix(NNZ, N);
+	ReadMatrixInfo(Matrix, fileName);
+	QueryPerformanceCounter(&finish);
+	timer = (finish.QuadPart - start.QuadPart) * 1000.0f / frequency.QuadPart;
+	fprintf(fp, "Time Read Matrix Info: \t%lf\n\n", timer);
 
-	ReadMatrixInfo(Matrix);
-	Matrix.PrintMatrix(Matrix.NNZ);
-	//for CRS
 	//Matrix.Sort(Matrix.NNZ);
-	//Matrix.PrintMatrix(Matrix.NNZ);
-	//CCSMATRIX* Test = ConverterToC�S(Matrix);
-	//CRSMATRIX* Test = ConverterToCRS(Matrix);
-	/*CCSMATRIX* test = ConverterToCCS(Matrix);*/
-	//Test->PrintCRSMatrix(Test->NNZ, Test->N);
-	//COMPDIAGMATRIX* test = ConverterToCompDiag(Matrix);
-	//test->PrintJDIAGMatrix(test->NNZ, test->N);
-	SKYLINEMATRIX* test = ConverterToSL(Matrix);
-	test->PrintMatrix(test->NNZ, test->N);
+
+	QueryPerformanceFrequency(&frequency);
+	QueryPerformanceCounter(&start);
+	CCSMATRIX* Mtx_CCS = ConvertToCCS(Matrix);
+	QueryPerformanceCounter(&finish);
+	timer = (finish.QuadPart - start.QuadPart) * 1000.0f / frequency.QuadPart;
+	fprintf(fp, "Time Convert in \n\nCCS: \t\t%lf\n", timer);
+
+	QueryPerformanceFrequency(&frequency);
+	QueryPerformanceCounter(&start);
+	SKYLINEMATRIX* Mtx_SL = ConvertToSL(Matrix);
+	QueryPerformanceCounter(&finish);
+	timer = (finish.QuadPart - start.QuadPart) * 1000.0f / frequency.QuadPart;
+	fprintf(fp, "Time Convert in SL \t%lf\n", timer);
+
+	Matrix.Sort(Matrix.NNZ);
+
+	QueryPerformanceFrequency(&frequency);
+	QueryPerformanceCounter(&start);
+	CRSMATRIX* Mtx_CRS = ConvertToCRS(Matrix);
+	QueryPerformanceCounter(&finish);
+	timer = (finish.QuadPart - start.QuadPart) * 1000.0f / frequency.QuadPart;
+	fprintf(fp, "Time Convert in CRS \t%lf\n", timer);
+
 	v = (double*)malloc(Matrix.N * sizeof(double));
-	res = (double*)malloc(Matrix.N * sizeof(double));
-	for (int i = 0; i < Matrix.N; i++)
-	{
+	for (i = 0; i < Matrix.N; i++)
 		v[i] = 1;
-	}
 
-	res=Matrix_VectorMultiplicationInSL(test, v, N);
-//	res = Matrix_VectorMultiplicationInCCS(test, v, N);
+	QueryPerformanceFrequency(&frequency);
+	QueryPerformanceCounter(&start);
+	Matrix_VectorMultiplicationInCCS(Mtx_CCS, v, Mtx_CCS->N);
+	QueryPerformanceCounter(&finish);
+	timer = (finish.QuadPart - start.QuadPart) * 1000.0f / frequency.QuadPart;
+	fprintf(fp, "\nTime Matrix-Vector multiplication in \n\nCCS: \t\t%lf\n", timer);
 
-	printf("Result: \n");
-	for (int i = 0; i < Matrix.N; i++)
-		printf("%lf  ", res[i]);
-	system("pause");
+	QueryPerformanceFrequency(&frequency);
+	QueryPerformanceCounter(&start);
+	Matrix_VectorMultiplicationInSL(Mtx_SL, v, Mtx_SL->N);
+	QueryPerformanceCounter(&finish);
+	timer = (finish.QuadPart - start.QuadPart) * 1000.0f / frequency.QuadPart;
+	fprintf(fp, "Time Matrix-Vector multiplication in SL \t%lf\n", timer);
+
+	QueryPerformanceFrequency(&frequency);
+	QueryPerformanceCounter(&start);
+	Matrix_VectorMultiplicationInCRS(Mtx_CRS, v, Mtx_CRS->N);
+	QueryPerformanceCounter(&finish);
+	timer += (finish.QuadPart - start.QuadPart) * 1000.0f / frequency.QuadPart;
+	fprintf(fp, "Time Matrix-Vector multiplication in CRS \t%lf\n", timer);
+
+
+
+	DeleteCOOMATRIX(Matrix);
+	DeleteCOOMATRIX(Matrix);
+	DeleteCRSMATRIX(Mtx_CRS);
+	DeleteCCSMATRIX(Mtx_CCS);
+	DeleteSKYLINEMATRIX(Mtx_SL);
+	fclose(fp);
 }
+
+
+
+
+
+
+
+//	int i;
+//	int N = 0;
+//	int NNZ = 0;
+//	double *res_CCS;
+//	double *res_CRS;
+//	double *res_SL;
+//	double *v;
+//	clock_t start, finish;
+//
+//	start = clock();
+//	ReadNumberForMatrix(N, NNZ);
+//	COOMATRIX Matrix(NNZ, N);
+//	ReadMatrixInfo(Matrix);
+//	finish = clock();
+//	printf(" Time Read Matrix Info = %lf\n", (long double)(finish - start) / CLOCKS_PER_SEC);
+//	//if (N > 20)
+//	//	Matrix.PrintMatrix(Matrix.NNZ);
+//	////Matrix.Sort(Matrix.NNZ);
+//	//if (N > 20)
+//	//	Matrix.PrintMatrix(Matrix.NNZ);
+//
+//	v = (double*)malloc(Matrix.N * sizeof(double));
+//	for (i = 0; i < Matrix.N; i++)
+//		v[i] = 1;
+//
+//	start = clock();
+//	CCSMATRIX* Mtx_CCS = ConvertToCCS(Matrix);
+//	finish = clock();
+//	printf(" Time Convert in CCS = %lf\n", (long double)(finish - start) / CLOCKS_PER_SEC);
+//
+//	start = clock();
+//	res_CCS = Matrix_VectorMultiplicationInCCS(Mtx_CCS, v, Mtx_CCS->N);
+//	finish = clock();
+//	printf(" Time Matrix-Vector multiplication in CCS = %lf\n", (long double)(finish - start) / CLOCKS_PER_SEC);
+//
+//
+//	start = clock();
+//	SKYLINEMATRIX* Mtx_SL = ConvertToSL(Matrix);
+//	finish = clock();
+//	printf(" Time Convert in SL = %lf\n", (long double)(finish - start) / CLOCKS_PER_SEC);
+//
+//	start = clock();
+//	res_SL = Matrix_VectorMultiplicationInSL(Mtx_SL, v, Mtx_SL->N);
+//	finish = clock();
+//	printf(" Time Matrix-Vector multiplication in SL = %lf\n", (long double)(finish - start) / CLOCKS_PER_SEC);
+//
+//	Matrix.Sort(Matrix.NNZ);
+//
+//	start = clock();
+//	CRSMATRIX* Mtx_CRS = ConvertToCRS(Matrix);
+//	finish = clock();
+//	printf(" Time Convert in CRS = %lf\n", (long double)(finish - start) / CLOCKS_PER_SEC);
+//
+//	start = clock();
+//	res_CRS = Matrix_VectorMultiplicationInCRS(Mtx_CRS, v, Mtx_CRS->N);
+//	finish = clock();
+//	printf(" Time Matrix-Vector multiplication in CRS = %lf\n", (long double)(finish - start) / CLOCKS_PER_SEC);
+//
+//	DeleteCOOMATRIX(Matrix);
+//	DeleteCRSMATRIX(Mtx_CRS);
+//	DeleteCCSMATRIX(Mtx_CCS);
+//	DeleteSKYLINEMATRIX(Mtx_SL);
+//	system("pause");
+//
+//}
+//
+//
+//	int N = 0;
+//	int NNZ = 0;
+//	double *v, *res;
+//	ReadNumberForMatrix(N, NNZ);
+//	COOMATRIX Matrix(NNZ, N);
+//
+//	ReadMatrixInfo(Matrix);
+//	Matrix.PrintMatrix(Matrix.NNZ);
+//	//for CRS
+//	//Matrix.Sort(Matrix.NNZ);
+//	//Matrix.PrintMatrix(Matrix.NNZ);
+//	//CCSMATRIX* Test = ConverterToCСS(Matrix);
+//	//CRSMATRIX* Test = ConverterToCRS(Matrix);
+//	/*CCSMATRIX* test = ConverterToCCS(Matrix);*/
+//	//Test->PrintCRSMatrix(Test->NNZ, Test->N);
+//	JDIAGMATRIX* test = ConverterToJDIAG(Matrix);
+//	test->PrintMatrix(test->NNZ, test->N);
+//	//SKYLINEMATRIX* test = ConverterToSL(Matrix);
+//	//test->PrintMatrix(test->NNZ, test->N);
+////	v = (double*)malloc(Matrix.N * sizeof(double));
+////	res = (double*)malloc(Matrix.N * sizeof(double));
+////	for (int i = 0; i < Matrix.N; i++)
+////	{
+////		v[i] = 1;
+////	}
+////
+////	res=Matrix_VectorMultiplicationInJDIAG(test, v, N);
+//////	res = Matrix_VectorMultiplicationInCCS(test, v, N);
+////
+////	printf("Result: \n");
+////	for (int i = 0; i < Matrix.N; i++)
+////		printf("%lf  ", res[i]);
+//	system("pause");
+///}
